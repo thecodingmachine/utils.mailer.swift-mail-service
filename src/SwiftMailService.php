@@ -158,39 +158,5 @@ class SwiftMailService implements MailServiceInterface {
 		}
 
 	}
-	
-	
-	private function initMailTransport() {
-		if ($this->mailTransport != null) {
-			return;
-		}
-                
-                $transport = \Swift_SmtpTransport::newInstance($this->host, $this->port, $this->ssl);
-                
-		/*if (!empty($this->auth)) {
-			$config['connection_class'] = $this->auth;
-		}*/
-		if (!empty($this->userName)) {
-			$transport->setUsername($this->userName);
-		}
-		if (!empty($this->password)) {
-			$transport->setPassword($this->password);
-		}
-		/*if (!empty($this->ssl)) {
-			$config['connection_config']['ssl'] = $this->ssl;
-		} */
-		
-		
-                $mailer = \Swift_Mailer::newInstance($transport);
-                
-                $this->mailTransport = $mailer;
-                
-		/*$this->mailTransport = new Smtp();
-		$options   = new SmtpOptions($config);
-
-		$this->mailTransport->setOptions($options);*/
-		
-	}
-	
 }
 ?>

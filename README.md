@@ -1,7 +1,8 @@
 The SwiftMailService
 ===================
 
-The `SwiftMailService` is used to send mails using a SMTP mail server.
+The `SwiftMailService` is a wrapper of the Swift library for the Mouf PHP framework.
+It is used to send mails using a SMTP mail server.
 
 The `SwiftMailService` is designed to be simple to use. Behind the scene, the <code>SwiftMailService</code>
 is using the more complex (and more powerful) Swift Mailer mail service.
