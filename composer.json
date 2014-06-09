@@ -26,7 +26,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Mouf\\Utils\\Mailer": "src/"
+            "Mouf\\Utils\\Mailer\\": "src/"
         }
     },
     "extra": {
