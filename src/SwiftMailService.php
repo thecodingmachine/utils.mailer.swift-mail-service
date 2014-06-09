@@ -3,17 +3,8 @@ namespace Mouf\Utils\Mailer;
 
 use Mouf\Utils\Log\LogInterface;
 
-use Zend\Mail\Message;
-
-use Zend\Mail\Transport\SmtpOptions;
-
-use Zend\Mail\Transport\Smtp;
-
-use Zend\Mime\Message as MimeMessage;
-use Zend\Mime\Part as MimePart;
-use Zend\Mime\Mime as ZendMime;
 /**
- * This class sends mails using the Zend Framework SMTP mailer.<br/>
+ * This class sends mails using the Swift mailer.<br/>
  * <br/>
  * Note: if you are running a Windows machine, and therefore don't have an SMTP server, 
  * for testing purpose, you can use your gmail account:<br/>
@@ -27,78 +18,27 @@ use Zend\Mime\Mime as ZendMime;
  * <li>password => <em>Your password</em></li>
  * </ul>
  * Note: For secured mail that use the tls or ssl encrypting, the php_openssl extension must be installed.
- * 
- * @Component
  */
 class SwiftMailService implements MailServiceInterface {
 	
 	/**
-	 * The SMTP host to use.
-	 *
-	 * @Property
-	 * @Compulsory
-	 * @var string
+	 * The constructor takes in parameter a SwiftMailTransport.
+	 * 
+	 * @param \Swift_Transport_MailTransport $swiftMailTransport
 	 */
-	public $host = "127.0.0.1";
+	public function __construct(\Swift_Transport_MailTransport $swiftMailTransport) {
+		$this->mailTransport = $swiftMailTransport;
+	}
 	
 	/**
-	 * The logger to use.
+	 * The logger to use (optionnal)
 	 *
-	 * @Property
-	 * @Compulsory
-	 * @var LogInterface
+	 * @param LogInterface $log
 	 */
-	public $log;
-	
-	/**
-	 * The authentication mode.
-	 * Can be one of: "", "plain", "login", "crammd5"
-	 *
-	 * @Property
-	 * //@OneOf("plain", "login", "crammd5")
-	 * @var string
-	 */
-	public $auth;
-	
-	/**
-	 * The user to authenticate.
-	 *
-	 * @Property
-	 * @var string
-	 */
-	public $userName;
-	
-	/**
-	 * The password.
-	 *
-	 * @Property
-	 * @var string
-	 */
-	public $password;
-	
-	/**
-	 * The port to use.
-	 *
-	 * @Property
-	 * @var int
-	 */
-	public $port;
-	
-	/**
-	 * The SSL mode to use, if any. ("ssl" or "tls")
-	 *
-	 * @Property
-	 * // @OneOf("ssl", "tls")
-	 * @var string
-	 */
-	public $ssl;
-	
-	/**
-	 * The Zend mail transport.
-	 *
-	 * @var \Swift_SmtpTransport
-	 */
-	private $mailTransport;
+	public function setLog(LogInterface $log) {
+		$this->log = $log;
+		return $this;
+	}
 	
 	/**
 	 * Sends the mail passed in parameter.
@@ -106,7 +46,6 @@ class SwiftMailService implements MailServiceInterface {
 	 * @param MailInterface $mail The mail to send.
 	 */
 	public function send(MailInterface $mail) {
-		$this->initMailTransport();
 		
 		$swiftMail = \Swift_Message::newInstance();
 		
@@ -252,5 +191,6 @@ class SwiftMailService implements MailServiceInterface {
 		$this->mailTransport->setOptions($options);*/
 		
 	}
+	
 }
 ?>
