@@ -214,7 +214,9 @@ class SwiftMailService implements MailServiceInterface {
 		foreach ($recipients as $recipient) {
 			$recipientMails[] = $recipient->getMail();
 		}
-		$this->log->debug("Sending mail to ".implode(", ", $recipientMails).". Mail subject: ".$mail->getTitle());
+		if ($this->log) {
+			$this->log->debug("Sending mail to ".implode(", ", $recipientMails).". Mail subject: ".$mail->getTitle());
+		}
 
 	}
 	
