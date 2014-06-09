@@ -22,13 +22,31 @@ on your machine.
 If you are performing your developments on a Windows machine, it is quite likely that you will not have an SMTP server on your machine. You will 
 therefore have to use a remote server. To access the remote server, you will certainly have to use login/passwords, etc...
 
-When this package is installed, it will create a default "smtpMailService" and put in this instance all the parameters you have provided.
+When this package is installed, it will create 2 instances:
+
+- a `swiftMailService` that implements Mouf's `MailServiceInterface`
+- a `swiftMailer` that is the classic Swift mailer.
 
 <div class="alert alert-info">Note: nothing prevents you from creating several instances of the SwiftMailService class
 with different parameters (in the rare case you have an application that needs to connect to several SMTP servers).</div>
 
 After installation, you will see that a number of constants have been added to your `config.php` file.
 When deploying on other servers, you can of course change those constants to adapt to the settings of the server.
+
+What? 2 instances?
+------------------
+
+There are both a `swiftMailService` and a `swiftMailer`. Which should you use?
+
+Well it depends...
+
+- `swiftMailService` implements Mouf's `MailServiceInterface`. This is a simple interface to create mails easily.
+  Use it if you have simple needs. If you use this instance, you will be able to easily replace your Swift mailer
+  with any other mailer compatible with the `MailServiceInterface`, like the `SmtpMailService` (that uses
+  ZendMail as a backend), or the DBMailService (that stores mails in database instead of sending them).
+  
+- `swiftMailer` is great if you want a greater control over your mails, or if you are already used to using
+  Swift directly. It is also greatly documented over the web.
 
 Tip: using your gmail account to send mails
 -------------------------------------------
@@ -56,6 +74,63 @@ $mail = new Mail();
 $mail->setTitle("My mail");
 $mail->setBodyText("This is my mail!");
 $mail->setBodyHtml("This is my &lt;b&gt;mail&lt;/b&gt;!");
+$mail->setFrom(new MailAddress("my@server.com", "Server"));
+$mail->addToRecipient(new MailAddress("david@email.com", "David"));
+
+// Let's get the instance of the service
+$mailService = Mouf::getSwiftMailService();
+
+// Finally, we send the mail
+$mailService->send($mail);
+```
+
+Sending a mail with an attachment
+---------------------------------
+
+```php
+use Mouf\Utils\Mailer\Mail;
+use Mouf\Utils\Mailer\SwiftMailService;
+
+// The mail object
+$mail = new Mail();
+$mail->setTitle("My mail");
+$mail->setBodyHtml("A nice image: <img src='cid:my@img.resource'/>");
+$mail->setFrom(new MailAddress("my@server.com", "Server"));
+$mail->addToRecipient(new MailAddress("david@email.com", "David"));
+
+// The attachment
+$attachment = new MailAttachment();
+$attachment->setFileContent(file_get_contents('attachment.pdf'));
+$attachment->setMimeType('application/pdf');
+$mail->addAttachement($attachment);
+
+// Let's get the instance of the service
+$mailService = Mouf::getSwiftMailService();
+
+// Finally, we send the mail
+$mailService->send($mail);
+```
+
+Sending a mail with embedded image
+----------------------------------
+
+```php
+use Mouf\Utils\Mailer\Mail;
+use Mouf\Utils\Mailer\SwiftMailService;
+
+// The image we will embed:
+$embeddedImage = new MailAttachment();
+$embeddedImage->setFileContent(file_get_contents('img.png'));
+$embeddedImage->setMimeType('image/png');
+$embeddedImage->setAttachmentDisposition('inline');
+// Note: the format of the ID should be in the syntax of a mail: xxx@yyy.zzz
+$embeddedImage->setContentId('my@img.resource');
+
+// The mail object
+$mail = new Mail();
+$mail->addAttachement($embeddedImage);
+$mail->setTitle("My mail");
+$mail->setBodyHtml("A nice image: <img src='cid:my@img.resource'/>");
 $mail->setFrom(new MailAddress("my@server.com", "Server"));
 $mail->addToRecipient(new MailAddress("david@email.com", "David"));
 

@@ -2,6 +2,7 @@
 namespace Mouf\Utils\Mailer;
 
 use Mouf\Utils\Log\LogInterface;
+use Psr\Log\LoggerInterface;
 
 /**
  * This class sends mails using the Swift mailer.<br/>
@@ -21,13 +22,22 @@ use Mouf\Utils\Log\LogInterface;
  */
 class SwiftMailService implements MailServiceInterface {
 	
+	/** 
+	 * @var \Swift_Mailer
+	 */
+	private $swiftMailer;
+	/**
+	 * @var LoggerInterface
+	 */
+	private $log;
+	
 	/**
 	 * The constructor takes in parameter a SwiftMailTransport.
 	 * 
-	 * @param \Swift_Transport_MailTransport $swiftMailTransport
+	 * @param \Swift_Mailer $swiftMailer
 	 */
-	public function __construct(\Swift_Transport_MailTransport $swiftMailTransport) {
-		$this->mailTransport = $swiftMailTransport;
+	public function __construct(\Swift_Mailer $swiftMailer) {
+		$this->swiftMailer = $swiftMailer;
 	}
 	
 	/**
@@ -51,48 +61,43 @@ class SwiftMailService implements MailServiceInterface {
 		
 		$swiftMail->setCharset($mail->getEncoding());
                 
-                $swiftMail->setSubject($mail->getTitle());
-		
-		/*if ($mail->getBodyText() != null) {
-                        $swiftMail->setBody($mail->getBodyText());
-			$text = new MimePart($mail->getBodyText());
-			$text->type = "text/plain";
-			$text->encoding = $mail->getEncoding();
-			$parts[]  = $text;
-		}*/
+		$swiftMail->setSubject($mail->getTitle());
+
+		// Note: HTML version must be added as body and text as part for inline attachments to work.
+		// See: https://github.com/swiftmailer/swiftmailer/issues/184
 		if ($mail->getBodyHtml() != null) {
-                        $swiftMail->setBody($mail->getBodyHtml(),'text/html');
-			/*$bodyHtml = new MimePart($mail->getBodyHtml());
-			$bodyHtml->type = "text/html";
-			$bodyHtml->encoding = $mail->getEncoding();
-			$parts[]  = $bodyHtml;*/
+			$swiftMail->setBody($mail->getBodyHtml(), 'text/html');
+			if ($mail->getBodyText()) {
+				$swiftMail->addPart($mail->getBodyText(), 'text/plain');
+			}
+		} else {
+			$swiftMail->setBody($mail->getBodyText(), 'text/plain');
 		}
 		
 		if ($mail->getFrom()) {
 			$swiftMail->setFrom(array($mail->getFrom()->getMail() => $mail->getFrom()->getDisplayAs()));
 		}
                 
-                $toRecipients = array();
-		foreach ($mail->getToRecipients() as $recipient) {
-                        $toRecipients[$recipient->getMail()] = $recipient->getDisplayAs();
+		$toRecipients = array ();
+		foreach ( $mail->getToRecipients () as $recipient ) {
+			$toRecipients [$recipient->getMail ()] = $recipient->getDisplayAs ();
 		}
-                $swiftMail->setTo($toRecipients);
-                
-                $ccRecipients = array();
-		foreach ($mail->getCcRecipients() as $recipient) {
-                        $ccRecipients[$recipient->getMail()] = $recipient->getDisplayAs();
+		$swiftMail->setTo ( $toRecipients );
+		
+		$ccRecipients = array ();
+		foreach ( $mail->getCcRecipients () as $recipient ) {
+			$ccRecipients [$recipient->getMail ()] = $recipient->getDisplayAs ();
 		}
-                $swiftMail->setCc($ccRecipients);
-                
-                $bccRecipients = array();
-		foreach ($mail->getBccRecipients() as $recipient) {
-                        $bccRecipients[$recipient->getMail()] = $recipient->getDisplayAs();
+		$swiftMail->setCc ( $ccRecipients );
+		
+		$bccRecipients = array ();
+		foreach ( $mail->getBccRecipients () as $recipient ) {
+			$bccRecipients [$recipient->getMail ()] = $recipient->getDisplayAs ();
 		}
-                $swiftMail->setBcc($bccRecipients);
+		$swiftMail->setBcc ( $bccRecipients );
                 
-                //TODO Attachment
-		/*foreach ($mail->getAttachements() as $attachment) {
-			$encodingStr = $attachment->getEncoding();
+		foreach ($mail->getAttachements() as $attachment) {
+			/*$encodingStr = $attachment->getEncoding();
 			switch ($encodingStr) {
 				case "ENCODING_7BIT":
 					$encoding = ZendMime::ENCODING_7BIT;
@@ -106,32 +111,28 @@ class SwiftMailService implements MailServiceInterface {
 				case "ENCODING_BASE64":
 					$encoding = ZendMime::ENCODING_BASE64;
 					break;
-			}
+			}*/
 			$attachment_disposition = $attachment->getAttachmentDisposition();
 			switch ($attachment_disposition) {
 				case "inline":
-					$attachment_disposition = ZendMime::DISPOSITION_INLINE;
+					$file = new \Swift_EmbeddedFile($attachment->getFileContent(), $attachment->getFileName(), $attachment->getMimeType());
 					break;
 				case "attachment":
-					$attachment_disposition = ZendMime::DISPOSITION_ATTACHMENT;
-					break;
 				case "":
 				case null:
-					$attachment_disposition = null;
+					$file = new \Swift_Attachment($attachment->getFileContent(), $attachment->getFileName(), $attachment->getMimeType());
 					break;
 				default:
 					throw new Exception("Invalid attachment disposition for mail. Should be one of: 'inline', 'attachment'");
 			}
 			
-			$mimePart = new MimePart($attachment->getFileContent());
-			$mimePart->type = $attachment->getMimeType();
-			$mimePart->disposition = $attachment_disposition;
-			$mimePart->encoding = $encoding;
-			$mimePart->filename = $attachment->getFileName();
-			$mimePart->id = $attachment->getContentId();
+			$contentId = $attachment->getContentId();
+			if ($contentId) {
+				$file->setId($contentId);
+			}
 			
-			$parts[] = $mimePart;
-		}*/
+			$swiftMail->attach($file);
+		}
 		
 
 		//$body = new MimeMessage();
@@ -144,16 +145,16 @@ class SwiftMailService implements MailServiceInterface {
 			$swiftMail->getHeaders()->get('content-type')->setType('multipart/alternative');
 		}*/
 
-		$this->mailTransport->send($swiftMail);
-
+		$this->swiftMailer->send($swiftMail);
 
 		// Let's log the mail:
-		$recipients = array_merge($mail->getToRecipients(), $mail->getCcRecipients(), $mail->getBccRecipients());
-		$recipientMails = array();
-		foreach ($recipients as $recipient) {
-			$recipientMails[] = $recipient->getMail();
-		}
 		if ($this->log) {
+			$recipients = array_merge($mail->getToRecipients(), $mail->getCcRecipients(), $mail->getBccRecipients());
+			$recipientMails = array();
+			foreach ($recipients as $recipient) {
+				$recipientMails[] = $recipient->getMail();
+			}
+			
 			$this->log->debug("Sending mail to ".implode(", ", $recipientMails).". Mail subject: ".$mail->getTitle());
 		}
 

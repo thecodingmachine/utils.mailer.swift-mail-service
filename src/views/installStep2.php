@@ -89,7 +89,7 @@ jQuery(function(){
 	</div>
 	
 <?php 
-MoufHtmlHelper::drawInstancesDropDown("Logger", "logger", "Mouf\\Utils\\Log\\LogInterface", false, $this->loggerInstanceName);
+MoufHtmlHelper::drawInstancesDropDown("Logger", "logger", "Psr\\Log\\LoggerInterface", false, $this->loggerInstanceName);
 ?>
 	
 	<div class="control-group">

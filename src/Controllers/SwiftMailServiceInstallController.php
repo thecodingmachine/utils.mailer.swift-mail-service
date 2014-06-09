@@ -52,7 +52,7 @@ class SwiftMailServiceInstallController extends Controller {
 			$this->moufManager = MoufManager::getMoufManagerHiddenInstance();
 		}
 				
-		$this->content->addFile(dirname(__FILE__)."/../../../../views/installStep1.php", $this);
+		$this->content->addFile(__DIR__."/../views/installStep1.php", $this);
 		$this->template->toHtml();
 	}
 	
@@ -93,10 +93,10 @@ class SwiftMailServiceInstallController extends Controller {
 		$this->port = "25";
 		$this->user = "";
 		$this->password = "";
-		$this->loggerInstanceName = "errorLogLogger";
+		$this->loggerInstanceName = "psr.errorLogLogger";
 
 		ob_start();
-		$this->content->addFile(dirname(__FILE__)."/../../../../views/installStep2.php", $this);
+		$this->content->addFile(__DIR__."/../views/installStep2.php", $this);
 		$this->template->toHtml();
 		ob_end_flush();
 	}
@@ -110,7 +110,7 @@ class SwiftMailServiceInstallController extends Controller {
 	 * @Logged
 	 * @param string $selfedit If true, the name of the component must be a component from the Mouf framework itself (internal use only)
 	 */
-	public function install($host, $port, $user, $password, $auth, $ssl, $logger, $selfedit = "false") {
+	public function install($host, $port, $user, $password, $auth, $ssl, $logger = null, $selfedit = "false") {
 		if ($selfedit == "true") {
 			$this->moufManager = MoufManager::getMoufManager();
 		} else {
@@ -146,16 +146,28 @@ class SwiftMailServiceInstallController extends Controller {
 			$configManager->registerConstant("MAIL_SSL", "string", "", "The SSL mode to use, to connect to the SMTP server, if any. Can be one of '', 'ssl', 'tls'. For gmail, use 'tls'.");
 		}
 		
-		if (!$moufManager->instanceExists("smtpMailService")) {
-			$moufManager->declareComponent("smtpMailService", "Mouf\\Utils\\Mailer\\SmtpMailService");
-			$moufManager->setParameter("smtpMailService", "host", "MAIL_HOST", "config");
-			$moufManager->setParameter("smtpMailService", "port", "MAIL_PORT", "config");
-			$moufManager->setParameter("smtpMailService", "userName", "MAIL_USERNAME", "config");
-			$moufManager->setParameter("smtpMailService", "password", "MAIL_PASSWORD", "config");
-			$moufManager->setParameter("smtpMailService", "auth", "MAIL_AUTH", "config");
-			$moufManager->setParameter("smtpMailService", "ssl", "MAIL_SSL", "config");
-			$moufManager->bindComponent("smtpMailService", "log", $logger);
-		}
+
+		// Let's create the instances.
+		$swiftMailTransport = InstallUtils::getOrCreateInstance('swiftMailTransport', NULL, $moufManager);
+		$swiftMailTransport->setCode('$transport = \\Swift_SmtpTransport::newInstance(MAIL_HOST, MAIL_PORT, MAIL_SSL);
+
+if (MAIL_USERNAME) {
+	$transport->setUsername(MAIL_USERNAME);
+}
+if (MAIL_PASSWORD) {
+	$transport->setPassword(MAIL_PASSWORD);
+}
+if (MAIL_AUTH) {
+    $transport->setAuthMode(MAIL_AUTH);
+}
+
+return $transport;');
+		
+		$swiftMailer = InstallUtils::getOrCreateInstance('swiftMailer', NULL, $moufManager);
+		$swiftMailer->setCode('return \\Swift_Mailer::newInstance($container->get(\'swiftMailTransport\'));');
+				
+		$swiftMailService = InstallUtils::getOrCreateInstance('swiftMailService', NULL, $moufManager);
+		$swiftMailService->setCode('return new Mouf\\Utils\\Mailer\\SwiftMailService($container->get(\'swiftMailer\'));');
 		
 		$configPhpConstants = $configManager->getDefinedConstants();
 		$configPhpConstants['MAIL_HOST'] = $host;
@@ -170,5 +182,4 @@ class SwiftMailServiceInstallController extends Controller {
 		
 		InstallUtils::continueInstall($selfedit == "true");
 	}
-	
 }
