@@ -95,9 +95,10 @@ class SwiftMailService implements MailServiceInterface {
 			$bccRecipients [$recipient->getMail ()] = $recipient->getDisplayAs ();
 		}
 		$swiftMail->setBcc ( $bccRecipients );
-                
-		foreach ($mail->getAttachements() as $attachment) {
-			/*$encodingStr = $attachment->getEncoding();
+
+        if (!is_null($mail->getAttachements())) {
+            foreach ($mail->getAttachements() as $attachment) {
+                /*$encodingStr = $attachment->getEncoding();
 			switch ($encodingStr) {
 				case "ENCODING_7BIT":
 					$encoding = ZendMime::ENCODING_7BIT;
@@ -112,27 +113,28 @@ class SwiftMailService implements MailServiceInterface {
 					$encoding = ZendMime::ENCODING_BASE64;
 					break;
 			}*/
-			$attachment_disposition = $attachment->getAttachmentDisposition();
-			switch ($attachment_disposition) {
-				case "inline":
-					$file = new \Swift_EmbeddedFile($attachment->getFileContent(), $attachment->getFileName(), $attachment->getMimeType());
-					break;
-				case "attachment":
-				case "":
-				case null:
-					$file = new \Swift_Attachment($attachment->getFileContent(), $attachment->getFileName(), $attachment->getMimeType());
-					break;
-				default:
-					throw new Exception("Invalid attachment disposition for mail. Should be one of: 'inline', 'attachment'");
-			}
+                $attachment_disposition = $attachment->getAttachmentDisposition();
+                switch ($attachment_disposition) {
+                    case "inline":
+                        $file = new \Swift_EmbeddedFile($attachment->getFileContent(), $attachment->getFileName(), $attachment->getMimeType());
+                        break;
+                    case "attachment":
+                    case "":
+                    case null:
+                    $file = new \Swift_Attachment($attachment->getFileContent(), $attachment->getFileName(), $attachment->getMimeType());
+                    break;
+                    default:
+                        throw new Exception("Invalid attachment disposition for mail. Should be one of: 'inline', 'attachment'");
+                }
 			
-			$contentId = $attachment->getContentId();
-			if ($contentId) {
-				$file->setId($contentId);
-			}
+                $contentId = $attachment->getContentId();
+                if ($contentId) {
+                    $file->setId($contentId);
+                }
 			
-			$swiftMail->attach($file);
-		}
+                $swiftMail->attach($file);
+            }
+        }
 		
 
 		//$body = new MimeMessage();
