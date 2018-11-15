@@ -54,6 +54,7 @@ class SwiftMailService implements MailServiceInterface {
 	 * Sends the mail passed in parameter.
 	 *
 	 * @param MailInterface $mail The mail to send.
+	 * @return int total of mail send
 	 */
 	public function send(MailInterface $mail) {
 		
@@ -147,7 +148,7 @@ class SwiftMailService implements MailServiceInterface {
 			$swiftMail->getHeaders()->get('content-type')->setType('multipart/alternative');
 		}*/
 
-		$this->swiftMailer->send($swiftMail);
+		$numberSend = $this->swiftMailer->send($swiftMail);
 
 		// Let's log the mail:
 		if ($this->log) {
@@ -159,7 +160,7 @@ class SwiftMailService implements MailServiceInterface {
 			
 			$this->log->debug("Sending mail to ".implode(", ", $recipientMails).". Mail subject: ".$mail->getTitle());
 		}
-
+		return $numberSend;
 	}
 }
 ?>
